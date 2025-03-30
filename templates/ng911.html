@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NG911 File Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .file-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .file-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .file-item:hover {
+            background-color: #f8f9fa;
+        }
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 0.25rem;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>NG911 File Management</h2>
+        
+        <!-- File Upload Area -->
+        <div class="upload-area" id="uploadArea">
+            <input type="file" id="fileInput" class="d-none" multiple>
+            <p class="mb-0">Drag and drop files here or click to select files</p>
+            <small class="text-muted">Supported formats: PDF, TXT, DOC, DOCX</small>
+        </div>
+
+        <!-- File List -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Files in RAG</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="file-list" id="fileList">
+                    <!-- Files will be listed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+
+        // Load files on page load
+        loadFiles();
+
+        // Handle file selection
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#0d6efd';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#dee2e6';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#dee2e6';
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // Handle file input change
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            for (const file of files) {
+                uploadFile(file);
+            }
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/files', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    loadFiles(); // Reload the file list
+                } else {
+                    const error = await response.json();
+                    alert(`Error uploading file: ${error.error}`);
+                }
+            } catch (error) {
+                alert(`Error uploading file: ${error.message}`);
+            }
+        }
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const files = await response.json();
+                
+                fileList.innerHTML = files.map(file => `
+                    <div class="file-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${file.name}</strong>
+                            <br>
+                            <small class="text-muted">
+                                Size: ${formatFileSize(file.size)} | 
+                                Modified: ${new Date(file.modified * 1000).toLocaleString()}
+                            </small>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="deleteFile('${file.name}')">
+                            Delete
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                alert(`Error loading files: ${error.message}`);
+            }
+        }
+
+        async function deleteFile(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadFiles(); // Reload the file list
+                } else {
+                    const error = await response.json();
+                    alert(`Error deleting file: ${error.error}`);
+                }
+            } catch (error) {
+                alert(`Error deleting file: ${error.message}`);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html> 
