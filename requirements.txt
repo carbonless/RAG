@@ -1,6 +1,14 @@
+# flask==3.0.2
+# python-dotenv==1.0.1
+# llama-index
+# openai
+# werkzeug==3.0.1
+# setuptools==68.2.2 
+
 flask==3.0.2
 python-dotenv==1.0.1
-llama-index==0.12.26
-openai==1.12.0
+llama-index
+openai
 werkzeug==3.0.1
-setuptools==68.2.2 
+setuptools==68.2.2
+gunicorn
